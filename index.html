@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediBot Afrique — Assistant Santé IA</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ── SPLASH SCREEN ── -->
+  <div id="splash">
+    <div class="splash-logo">🏥</div>
+    <div class="splash-title">Medi<span>Bot</span> Afrique</div>
+    <div class="splash-sub">Votre assistant santé intelligent — 24h/24</div>
+    <div class="splash-bar">
+      <div class="splash-prog" id="prog"></div>
+    </div>
+    <div class="splash-langs">
+      <span class="splash-lang">🇫🇷 Français</span>
+      <span class="splash-lang">🇨🇮 Dioula</span>
+      <span class="splash-lang">🇨🇮 Baoulé</span>
+      <span class="splash-lang">🇸🇳 Wolof</span>
+      <span class="splash-lang">🇧🇫 Mooré</span>
+    </div>
+  </div>
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-box">🏥</div>
+      <span class="logo-text">Medi<span>Bot</span> Afrique</span>
+    </div>
+    <div class="header-right">
+      <span class="pill pill-green">🟢 IA Active</span>
+      <span class="pill pill-blue">Prototype v2.0</span>
+    </div>
+  </header>
+
+  <!-- ── APP GRID ── -->
+  <div class="app">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar" id="sidebar-left">
+
+      <!-- Langue -->
+      <div class="sc">
+        <div class="sc-title">🌍 Langue</div>
+        <div class="lang-grid">
+          <button class="lb on" onclick="setLang('fr', this)">
+            <span class="flag">🇫🇷</span>Français
+          </button>
+          <button class="lb" onclick="setLang('dioula', this)">
+            <span class="flag">🇨🇮</span>Dioula
+          </button>
+          <button class="lb" onclick="setLang('baoule', this)">
+            <span class="flag">🇨🇮</span>Baoulé
+          </button>
+          <button class="lb" onclick="setLang('wolof', this)">
+            <span class="flag">🇸🇳</span>Wolof
+          </button>
+        </div>
+      </div>
+
+      <!-- Canal -->
+      <div class="sc">
+        <div class="sc-title">📡 Canal d'accès</div>
+        <div class="ch-list">
+          <button class="ch on" onclick="setCh('whatsapp', this)">
+            <span class="ico">💬</span> WhatsApp
+          </button>
+          <button class="ch" onclick="setCh('sms', this)">
+            <span class="ico">📱</span> SMS / USSD *126#
+          </button>
+          <button class="ch" onclick="setCh('web', this)">
+            <span class="ico">🌐</span> Application Web
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="sc">
+        <div class="sc-title">📊 Statistiques</div>
+        <div class="stat-g">
+          <div class="stat">
+            <div class="stat-n" id="sc">0</div>
+            <div class="stat-l">Consultations</div>
+          </div>
+          <div class="stat">
+            <div class="stat-n">25</div>
+            <div class="stat-l">Pathologies</div>
+          </div>
+          <div class="stat">
+            <div class="stat-n">5</div>
+            <div class="stat-l">Langues</div>
+          </div>
+          <div class="stat">
+            <div class="stat-n">2 500</div>
+            <div class="stat-l">Centres CI</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scénarios démo -->
+      <div class="sc">
+        <div class="sc-title">🎭 Scénarios démo</div>
+        <div class="demo-list">
+          <button class="demo-btn" onclick="runDemo('paludisme')">
+            <span class="demo-tag">🦟 Cas typique</span>
+            Fièvre + frissons depuis 2 jours — suspicion paludisme
+          </button>
+          <button class="demo-btn" onclick="runDemo('urgence')">
+            <span class="demo-tag">🚨 Urgence</span>
+            Douleur thoracique intense + difficultés respiratoires
+          </button>
+          <button class="demo-btn" onclick="runDemo('enfant')">
+            <span class="demo-tag">👶 Pédiatrie</span>
+            Enfant 3 ans — fièvre 39°C + vomissements
+          </button>
+          <button class="demo-btn" onclick="runDemo('rhume')">
+            <span class="demo-tag">🤧 Auto-soin</span>
+            Rhume, nez bouché, légère fatigue depuis hier
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER : CHAT -->
+    <main class="chat-wrap">
+      <div class="chat-top">
+        <div class="chat-top-left">
+          <div class="av">🤖</div>
+          <div>
+            <div class="av-name">MediBot Afrique</div>
+            <div class="av-status">
+              <span class="dot"></span> Disponible 24h/24 · IA médicale
+            </div>
+          </div>
+        </div>
+        <button class="reset-btn" onclick="resetChat()">↺ Nouvelle session</button>
+      </div>
+
+      <div id="msgs"></div>
+      <div id="qr"></div>
+
+      <div class="chat-inp">
+        <textarea
+          id="inp"
+          rows="1"
+          placeholder="Décrivez vos symptômes en français, Dioula, Baoulé…"
+          onkeydown="onKey(event)"
+          oninput="resize(this)"
+        ></textarea>
+        <button class="send" onclick="send()" aria-label="Envoyer">
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar" id="sidebar-right">
+
+      <!-- Triage -->
+      <div class="sc">
+        <div class="sc-title">🩺 Niveau de triage</div>
+        <div class="triage-box" id="tbox">
+          <div class="triage-ico">⏳</div>
+          <div class="triage-lbl">En attente</div>
+          <div class="triage-desc">Le niveau sera déterminé après analyse de vos symptômes</div>
+        </div>
+      </div>
+
+      <!-- Centres de santé -->
+      <div class="sc">
+        <div class="sc-title">📍 Centres de santé proches</div>
+        <div class="center-list">
+          <div class="center-item">
+            <div class="center-name">CHU de Cocody</div>
+            <div class="center-dist">⬤ 2.3 km · Urgences 24h/24</div>
+          </div>
+          <div class="center-item">
+            <div class="center-name">Polyclinique Internationale</div>
+            <div class="center-dist">⬤ 3.8 km · Lun–Sam 7h–19h</div>
+          </div>
+          <div class="center-item">
+            <div class="center-name">CSU Yopougon</div>
+            <div class="center-dist">⬤ 1.1 km · Lun–Ven 8h–16h</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Urgences -->
+      <div class="sc">
+        <div class="sc-title">🚨 Numéros d'urgence</div>
+        <div class="urg-list">
+          <div class="urg urg-red">
+            <div>
+              <div class="urg-label red">🚑 SAMU</div>
+              <div class="urg-sub red">Service médical d'urgence</div>
+            </div>
+            <div class="urg-num red">185</div>
+          </div>
+          <div class="urg urg-blue">
+            <div>
+              <div class="urg-label blue">🚒 Pompiers</div>
+              <div class="urg-sub blue">Secours d'urgence</div>
+            </div>
+            <div class="urg-num blue">180</div>
+          </div>
+          <div class="urg urg-gray">
+            <div>
+              <div class="urg-label">👮 Police</div>
+            </div>
+            <div class="urg-num">110</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avertissement -->
+      <div class="disclaimer">
+        <strong>⚠️ Avertissement médical</strong>
+        MediBot oriente uniquement — il ne diagnostique pas. En cas de doute, consultez immédiatement un médecin ou appelez le 185.
+      </div>
+
+    </aside>
+  </div><!-- end .app -->
+
+  <script src="script.js"></script>
+</body>
+</html>

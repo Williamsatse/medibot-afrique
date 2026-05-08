@@ -777,6 +777,7 @@ header {
 #msgs::-webkit-scrollbar       { width: 3px; }
 #msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
+
 /* ============================================================
    BOUTON MICRO & ANIMATION ONDES
    ============================================================ */
@@ -894,6 +895,7 @@ header {
 .mic-btn.recording::after {
   content: "Appuyez pour arrêter";
 }
+
 
 /* ============================================================
    RESPONSIVE

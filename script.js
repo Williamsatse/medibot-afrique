@@ -1,8 +1,6 @@
 /* ============================================================
-   MediBot Afrique — script.js
+   MediBot Afrique — script.js (corrigé & compatibilité)
    Projet : Concours IA Sino-Africain 2026
-   Auteur : [Votre Nom] — Technicien Supérieur en Bâtiment
-   Description : Logique IA, gestion du chat et interactions
    ============================================================ */
 
 /* ── ÉTAT GLOBAL ── */
@@ -11,7 +9,7 @@ let channel = 'whatsapp';
 let hist    = [];
 let count   = 0;
 let busy    = false;
-let micRec = null;   // instance SpeechRecognition
+let micRec  = null;
 let isRecording = false;
 
 /* ── SCÉNARIOS DÉMO ── */
@@ -241,36 +239,54 @@ function setTriage(level) {
 }
 
 /* ============================================================
-   API CLAUDE
+   API CLAUDE (avec timeout pour réseaux lents)
    ============================================================ */
 
 /** Appelle l'API Anthropic et retourne la réponse */
 async function callAI(userMessage) {
   hist.push({ role: 'user', content: userMessage });
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model:      'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system:     buildSystemPrompt(),
-      messages:   hist
-    })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
-  const data  = await response.json();
-  let   reply = data.content?.[0]?.text || 'Désolé, une erreur est survenue. Veuillez réessayer.';
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system:     buildSystemPrompt(),
+        messages:   hist
+      })
+    });
 
-  /* Extrait le niveau de triage de la réponse */
-  const triageMatch = reply.match(/TRIAGE:(URGENT|CONSULT|OK)/);
-  if (triageMatch) {
-    setTriage(triageMatch[1]);
-    reply = reply.replace(/\nTRIAGE:(URGENT|CONSULT|OK)/, '').trim();
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status);
+    }
+
+    const data  = await response.json();
+    let   reply = data.content?.[0]?.text || 'Désolé, une erreur est survenue. Veuillez réessayer.';
+
+    /* Extrait le niveau de triage de la réponse */
+    const triageMatch = reply.match(/TRIAGE:(URGENT|CONSULT|OK)/);
+    if (triageMatch) {
+      setTriage(triageMatch[1]);
+      reply = reply.replace(/\nTRIAGE:(URGENT|CONSULT|OK)/, '').trim();
+    }
+
+    hist.push({ role: 'assistant', content: reply });
+    return { reply, triage: triageMatch?.[1] };
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === 'AbortError') {
+      return { reply: '⏱️ La connexion est trop lente ou interrompue. Vérifiez votre réseau et réessayez.', triage: null };
+    }
+    throw err;
   }
-
-  hist.push({ role: 'assistant', content: reply });
-  return { reply, triage: triageMatch?.[1] };
 }
 
 /* ============================================================
@@ -380,24 +396,6 @@ function runDemo(key) {
 }
 
 /* ============================================================
-   INITIALISATION & RESET
-   ============================================================ */
-
-function initChat() {
-  hist = [];
-  document.getElementById('msgs').innerHTML = '';
-  addBot(WELCOME[lang] || WELCOME.fr);
-  showQR(QRS[lang] || QRS.fr);
-  setTriage(null);
-}
-
-function resetChat() {
-  initChat();
-  hist = [];
-  setTriage(null);
-}
-
-/* ============================================================
    RECONNAISSANCE VOCALE
    ============================================================ */
 
@@ -409,15 +407,15 @@ function toggleMic() {
     return;
   }
 
-  // Vérifie support navigateur
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    addBot("⚠️ Votre navigateur ne supporte pas la reconnaissance vocale. Essayez Chrome ou Safari.", 'warn');
+    addBot("🎤 Votre navigateur ne supporte pas la dictée vocale. Utilisez **Chrome** ou tapez votre message.", 'warn');
+    document.getElementById('inp').focus();
     return;
   }
 
   micRec = new SpeechRecognition();
-  micRec.lang = lang === 'fr' ? 'fr-FR' : 'fr-FR'; // fallback fr
+  micRec.lang = lang === 'fr' ? 'fr-FR' : 'fr-FR';
   micRec.continuous = false;
   micRec.interimResults = true;
   micRec.maxAlternatives = 1;
@@ -450,7 +448,6 @@ function toggleMic() {
 
   micRec.onend = () => {
     if (isRecording) {
-      // L'utilisateur n'a pas cliqué sur stop → envoi auto si texte présent
       const input = document.getElementById('inp');
       if (input.value.trim()) {
         send();
@@ -485,6 +482,75 @@ function resetMicUI() {
   };
   document.getElementById('inp').placeholder = placeholders[channel] || placeholders.web;
 }
+
+/* ============================================================
+   DRAWERS MOBILE
+   ============================================================ */
+
+function toggleDrawer(side) {
+  const el = document.getElementById('sidebar-' + side);
+  const overlay = document.getElementById('drawerOverlay');
+  const otherSide = side === 'left' ? 'right' : 'left';
+  const otherEl = document.getElementById('sidebar-' + otherSide);
+  
+  const isOpen = el.classList.contains('open');
+  
+  otherEl.classList.remove('open');
+  
+  if (!isOpen) {
+    el.classList.add('open');
+    overlay.classList.add('open');
+  } else {
+    el.classList.remove('open');
+    if (!otherEl.classList.contains('open')) {
+      overlay.classList.remove('open');
+    }
+  }
+}
+
+function closeDrawers() {
+  document.querySelectorAll('.sidebar').forEach(s => s.classList.remove('open'));
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+/* ============================================================
+   CONNEXION RÉSEAU
+   ============================================================ */
+
+function showNetStatus(online) {
+  const existing = document.getElementById('net-status');
+  if (existing) existing.remove();
+  
+  if (!online) {
+    const bar = document.createElement('div');
+    bar.id = 'net-status';
+    bar.textContent = '⚠️ Hors ligne — vos messages seront envoyés à la reconnexion';
+    bar.style.cssText = 'position:fixed;top:60px;left:0;right:0;background:#F59E0B;color:#fff;text-align:center;padding:6px;font-size:12px;z-index:300;font-weight:600;letter-spacing:0.02em;';
+    document.body.appendChild(bar);
+  }
+}
+
+window.addEventListener('online', () => showNetStatus(true));
+window.addEventListener('offline', () => showNetStatus(false));
+
+/* ============================================================
+   INITIALISATION & RESET
+   ============================================================ */
+
+function initChat() {
+  hist = [];
+  document.getElementById('msgs').innerHTML = '';
+  addBot(WELCOME[lang] || WELCOME.fr);
+  showQR(QRS[lang] || QRS.fr);
+  setTriage(null);
+}
+
+function resetChat() {
+  initChat();
+  hist = [];
+  setTriage(null);
+}
+
 /* ============================================================
    SPLASH SCREEN — Animation de chargement
    ============================================================ */

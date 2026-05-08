@@ -11,6 +11,8 @@ let channel = 'whatsapp';
 let hist    = [];
 let count   = 0;
 let busy    = false;
+let micRec = null;   // instance SpeechRecognition
+let isRecording = false;
 
 /* ── SCÉNARIOS DÉMO ── */
 const DEMOS = {
@@ -395,6 +397,94 @@ function resetChat() {
   setTriage(null);
 }
 
+/* ============================================================
+   RECONNAISSANCE VOCALE
+   ============================================================ */
+
+function toggleMic() {
+  const btn = document.getElementById('micBtn');
+
+  if (isRecording) {
+    stopMic();
+    return;
+  }
+
+  // Vérifie support navigateur
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    addBot("⚠️ Votre navigateur ne supporte pas la reconnaissance vocale. Essayez Chrome ou Safari.", 'warn');
+    return;
+  }
+
+  micRec = new SpeechRecognition();
+  micRec.lang = lang === 'fr' ? 'fr-FR' : 'fr-FR'; // fallback fr
+  micRec.continuous = false;
+  micRec.interimResults = true;
+  micRec.maxAlternatives = 1;
+
+  micRec.onstart = () => {
+    isRecording = true;
+    btn.classList.add('recording');
+    document.getElementById('inp').placeholder = "J'écoute... parlez maintenant";
+  };
+
+  micRec.onresult = (event) => {
+    let final = '';
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) final += transcript;
+      else interim += transcript;
+    }
+    const input = document.getElementById('inp');
+    input.value = (input.value ? input.value + ' ' : '') + final + interim;
+    resize(input);
+  };
+
+  micRec.onerror = (event) => {
+    if (event.error !== 'aborted') {
+      addBot("🎤 Je n'ai pas bien compris. Pouvez-vous répéter ?", 'warn');
+    }
+    resetMicUI();
+  };
+
+  micRec.onend = () => {
+    if (isRecording) {
+      // L'utilisateur n'a pas cliqué sur stop → envoi auto si texte présent
+      const input = document.getElementById('inp');
+      if (input.value.trim()) {
+        send();
+      }
+    }
+    resetMicUI();
+  };
+
+  try {
+    micRec.start();
+  } catch (e) {
+    addBot("🎤 Impossible d'accéder au micro. Vérifiez les permissions.", 'warn');
+  }
+}
+
+function stopMic() {
+  if (micRec) {
+    micRec.stop();
+    micRec = null;
+  }
+  isRecording = false;
+  resetMicUI();
+}
+
+function resetMicUI() {
+  const btn = document.getElementById('micBtn');
+  btn.classList.remove('recording');
+  const placeholders = {
+    whatsapp: 'Décrivez vos symptômes…',
+    sms:      'SMS court (160 car. max)…',
+    web:      'Décrivez vos symptômes en détail…'
+  };
+  document.getElementById('inp').placeholder = placeholders[channel] || placeholders.web;
+}
 /* ============================================================
    SPLASH SCREEN — Animation de chargement
    ============================================================ */
